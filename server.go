@@ -1,10 +1,9 @@
 package main
 
 import (
-	"fmt"
-	//	"io"
 	"bytes"
 	"container/list"
+	"fmt"
 	"log"
 	"net"
 )
@@ -28,7 +27,6 @@ type user struct {
 func (u *user) Read(buffer []byte) bool {
 	_, err := u.conn.Read(buffer)
 	if err != nil {
-		fmt.Println(err)
 		u.Close()
 		return false
 	}
@@ -79,10 +77,8 @@ func init() {
 //从用户的get channel中拿到消息并且返回conn
 func sender(u *user) {
 	for {
-		//fmt.Println("sender loop")
 		select {
 		case buffer := <-u.Get:
-			//fmt.Println(u.Name, "get", string(buffer))
 			u.conn.Write([]byte(buffer))
 		case <-u.Quit:
 			u.conn.Close()
@@ -94,10 +90,8 @@ func sender(u *user) {
 //从send中拿到消息分发到各个用户的get channel中
 func (s *chatServer) loop() {
 	for msg := range s.send {
-		//fmt.Println("broadcat:", msg)
 		for e := s.users.Front(); e != nil; e = e.Next() {
 			u := e.Value.(*user)
-			//fmt.Println("broadcast to ", u.Name)
 			u.Get <- msg
 		}
 	}
@@ -107,17 +101,15 @@ func (s *chatServer) loop() {
 func receiver(u *user) {
 	buffer := make([]byte, 1024)
 	for u.Read(buffer) {
-		if bytes.Equal(buffer, []byte("/quit")) {
+		if bytes.Equal(buffer, []byte("\\quit")) {
 			u.Close()
 			break
 		}
-		send := u.Name + ">" + string(buffer)
-		//fmt.Println("read", send)
+		send := u.Name + ":" + string(buffer)
 		u.Send <- send
-		//fmt.Println("after send")
-		buffer = make([]byte, 0)
+		buffer = make([]byte, 1024)
 	}
-	u.Send <- u.Name + "has left chat"
+	u.Send <- u.Name + ":has left chat\n"
 	return
 }
 
@@ -134,7 +126,7 @@ func (s *chatServer) handle(conn net.Conn) {
 	go receiver(u)
 	s.users.PushBack(u)
 	//fmt.Println(name, "join the chat room")
-	s.send <- string(name + " has joined the chat")
+	s.send <- string(name + ":has joined the chat\n")
 }
 
 func main() {
