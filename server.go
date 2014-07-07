@@ -105,11 +105,12 @@ func receiver(u *user) {
 			u.Close()
 			break
 		}
-		send := u.Name + ":" + string(buffer)
+		send := u.Name + ":" + string(buffer) + "\n"
 		u.Send <- send
 		buffer = make([]byte, 1024)
 	}
-	u.Send <- u.Name + ":has left chat\n"
+	u.Send <- "leave:" + u.Name + "\n"
+	u.Close()
 	return
 }
 
@@ -126,7 +127,7 @@ func (s *chatServer) handle(conn net.Conn) {
 	go receiver(u)
 	s.users.PushBack(u)
 	//fmt.Println(name, "join the chat room")
-	s.send <- string(name + ":has joined the chat\n")
+	s.send <- "join:" + name + "\n"
 }
 
 func main() {
