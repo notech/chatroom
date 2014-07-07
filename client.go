@@ -125,7 +125,9 @@ func readRoutine(ch chan<- string) {
 		case "leave":
 			for e := users.Front(); e != nil; e = e.Next() {
 				name := e.Value.(string)
+				windCommand.Addstr("\n\nLEAVE:-----" + name + "------\n")
 				if name == res[index+1:] {
+					windCommand.Addstr("\n\nLEAVE:" + name + "\n\n")
 					users.Remove(e)
 				}
 			}
