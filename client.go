@@ -24,6 +24,16 @@ var (
 
 const address = "127.0.0.1:4000"
 
+func clear(win *gocurses.Window) {
+
+	row, col := win.Getmaxyx()
+	for i := 0; i < row; i++ {
+		win.Mvaddstr(i, 0, strings.Repeat(" ", col))
+	}
+
+	win.Box(0, 0)
+	//	win.Refresh()
+}
 func init() {
 	gocurses.Initscr()
 	gocurses.Cbreak()
@@ -61,6 +71,7 @@ func getChatLine() func() int {
 	return func() int {
 		if chatline > 10 {
 			chatline = 0
+			clear(windRoom)
 		} else {
 			chatline++
 		}
@@ -80,6 +91,16 @@ func readString(win *gocurses.Window) string {
 	}
 }
 
+func updateOnline(users *list.List, win *gocurses.Window) {
+	clear(win)
+	i := 2
+	win.Mvaddstr(1, 1, "Online:\n")
+	for e := users.Front(); e != nil; e = e.Next() {
+		win.Mvaddstr(i, 0, e.Value.(string))
+		i++
+	}
+	win.Refresh()
+}
 func readRoutine(ch chan<- string) {
 	reader := bufio.NewReader(conn)
 	cl := getChatLine()
@@ -90,9 +111,17 @@ func readRoutine(ch chan<- string) {
 		windCommand.Addstr(res)
 
 		cmd := res[:index]
+		windCommand.Addstr(cmd)
 		switch cmd {
 		case "join":
 			users.PushBack(res[index+1:])
+			updateOnline(users, windFriends)
+			if err != nil {
+				windRoom.Mvaddstr(c, 1, fmt.Sprintf("%s %d\n", err.Error(), c))
+			} else {
+				windRoom.Mvaddstr(c, 1, fmt.Sprintf("%s %d\n", res, c))
+			}
+			windRoom.Refresh()
 		case "leave":
 			for e := users.Front(); e != nil; e = e.Next() {
 				name := e.Value.(string)
@@ -100,6 +129,19 @@ func readRoutine(ch chan<- string) {
 					users.Remove(e)
 				}
 			}
+			updateOnline(users, windFriends)
+			if err != nil {
+				windRoom.Mvaddstr(c, 1, fmt.Sprintf("%s %d\n", err.Error(), c))
+			} else {
+				windRoom.Mvaddstr(c, 1, fmt.Sprintf("%s %d\n", res, c))
+			}
+			windRoom.Refresh()
+		case "users":
+			uss := strings.Split(res[index+1:], ";")
+			for _, u := range uss {
+				users.PushBack(u + "\n")
+			}
+			updateOnline(users, windFriends)
 		default:
 			if err != nil {
 				windRoom.Mvaddstr(c, 1, fmt.Sprintf("%s %d\n", err.Error(), c))
@@ -107,7 +149,6 @@ func readRoutine(ch chan<- string) {
 				windRoom.Mvaddstr(c, 1, fmt.Sprintf("%s %d\n", res, c))
 			}
 			windRoom.Refresh()
-
 		}
 	}
 }

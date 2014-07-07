@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 )
 
 const listenAddr = "localhost:4000"
@@ -125,9 +126,16 @@ func (s *chatServer) handle(conn net.Conn) {
 	u := &user{name, make(chan string), s.send, make(chan bool), conn, s.users}
 	go sender(u)
 	go receiver(u)
-	s.users.PushBack(u)
 	//fmt.Println(name, "join the chat room")
 	s.send <- "join:" + name + "\n"
+	var onlineUsers []string
+	for e := s.users.Front(); e != nil; e = e.Next() {
+		u := e.Value.(*user)
+		onlineUsers = append(onlineUsers, u.Name)
+	}
+	s.users.PushBack(u)
+	res := strings.Join(onlineUsers, ";")
+	conn.Write([]byte("users:" + res + "\n"))
 }
 
 func main() {
